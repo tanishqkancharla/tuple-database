@@ -6,7 +6,13 @@ import { Tuple, Value } from "../storage/types"
 import { compare } from "./compare"
 import { UnreachableError } from "./Unreachable"
 
-export type EncodingOptions = {
+const defaultOptions: Required<CodecOptions> = {
+	delimiter: "\x00",
+	escape: "\x01",
+	disallow: [],
+}
+
+export type CodecOptions = {
 	/**
 	 * The delimiter between values in a tuple.
 	 * @default "\x00"
@@ -18,7 +24,7 @@ export type EncodingOptions = {
 	 */
 	escape?: string
 	/**
-	 * Characters that are not allowed in strings. Throws an error if any are found.
+	 * Disallowed characters. Throws an error if any are found while encoding.
 	 */
 	disallow?: string[]
 }
@@ -38,9 +44,9 @@ export type EncodingType = keyof typeof encodingByte
 export const encodingRank = sortBy(
 	Object.entries(encodingByte),
 	([_key, value]) => value
-).map(([key]) => key)
+).map(([key]) => key as EncodingType)
 
-export function encodeValue(value: Value, options?: EncodingOptions): string {
+export function encodeValue(value: Value, options?: CodecOptions): string {
 	if (value === null) {
 		return encodingByte.null
 	}
@@ -48,7 +54,7 @@ export function encodeValue(value: Value, options?: EncodingOptions): string {
 		return encodingByte.boolean + value
 	}
 	if (typeof value === "string") {
-		for (const disallowed of options?.disallow ?? []) {
+		for (const disallowed of options?.disallow ?? defaultOptions.disallow) {
 			if (value.includes(disallowed)) {
 				throw new Error(`Disallowed character found: ${disallowed}.`)
 			}
@@ -93,7 +99,7 @@ const decodeType = invert(encodingByte) as {
 	[key: string]: keyof typeof encodingByte
 }
 
-export function decodeValue(str: string, options?: EncodingOptions): Value {
+export function decodeValue(str: string, options?: CodecOptions): Value {
 	const encoding: EncodingType = decodeType[str[0]]
 	const rest = str.slice(1)
 
@@ -118,9 +124,9 @@ export function decodeValue(str: string, options?: EncodingOptions): Value {
 	throw new UnreachableError(encoding, "Invalid encoding byte")
 }
 
-export function encodeTuple(tuple: Tuple, options?: EncodingOptions) {
-	const delimiter = options?.delimiter ?? "\x00"
-	const escape = options?.escape ?? "\x01"
+export function encodeTuple(tuple: Tuple, options?: CodecOptions) {
+	const delimiter = options?.delimiter ?? defaultOptions.delimiter
+	const escape = options?.escape ?? defaultOptions.escape
 	const reEscapeByte = new RegExp(escape, "g")
 	const reDelimiterByte = new RegExp(delimiter, "g")
 	return tuple
@@ -137,13 +143,13 @@ export function encodeTuple(tuple: Tuple, options?: EncodingOptions) {
 		.join("")
 }
 
-export function decodeTuple(str: string, options?: EncodingOptions) {
+export function decodeTuple(str: string, options?: CodecOptions) {
 	if (str === "") {
 		return []
 	}
 
-	const delimiter = options?.delimiter ?? "\x00"
-	const escape = options?.escape ?? "\x01"
+	const delimiter = options?.delimiter ?? defaultOptions.delimiter
+	const escape = options?.escape ?? defaultOptions.escape
 
 	// Capture all of the escaped BB and BA pairs and wait
 	// til we find an exposed A.
@@ -178,7 +184,7 @@ export function decodeTuple(str: string, options?: EncodingOptions) {
 	}
 }
 
-function encodeObjectValue(obj: object, options?: EncodingOptions) {
+function encodeObjectValue(obj: object, options?: CodecOptions) {
 	if (!isPlainObject(obj)) {
 		throw new Error("Cannot serialize this object.")
 	}
@@ -190,7 +196,7 @@ function encodeObjectValue(obj: object, options?: EncodingOptions) {
 	return encodeTuple(entries as Tuple, options)
 }
 
-function decodeObjectValue(str: string, options?: EncodingOptions) {
+function decodeObjectValue(str: string, options?: CodecOptions) {
 	const entries = decodeTuple(str, options) as Array<[string, Value]>
 	const obj = {}
 	for (const [key, value] of entries) {

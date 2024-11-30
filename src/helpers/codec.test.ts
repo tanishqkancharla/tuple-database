@@ -86,36 +86,18 @@ describe("codec", () => {
 		})
 
 		it("Encodes in lexicographical order", () => {
-			const test2 = (
-				a: { tuple: Tuple; rank: number },
-				b: { tuple: Tuple; rank: number },
-				result: number
-			) => {
-				try {
-					test(a.tuple, b.tuple, result)
-				} catch (e) {
-					console.log({ aRank: a.rank, bRank: b.rank })
-					throw e
-				}
-			}
-
 			const test = (aTuple: Tuple, bTuple: Tuple, result: number) => {
 				const a = encodeTuple(aTuple)
 				const b = encodeTuple(bTuple)
 				const actual = compare(a, b)
 				const expected = result
-				try {
-					assert.deepStrictEqual(
-						actual,
-						expected,
-						`compareTuple(${[TupleToString(aTuple), TupleToString(bTuple)].join(
-							", "
-						)}) === compare(${[JSON.stringify(a), JSON.stringify(b)].join(", ")})`
-					)
-				} catch (e) {
-					console.log({ aTuple, bTuple, a, b, actual, expected })
-					throw e
-				}
+				assert.deepStrictEqual(
+					actual,
+					expected,
+					`compareTuple(${[TupleToString(aTuple), TupleToString(bTuple)].join(
+						", "
+					)}) === compare(${[JSON.stringify(a), JSON.stringify(b)].join(", ")})`
+				)
 			}
 
 			for (let i = 0; i < sortedValues.length; i++) {
@@ -157,7 +139,7 @@ describe("codec", () => {
 			for (let iter = 0; iter < 100_000; iter++) {
 				const a = sample()
 				const b = sample()
-				test2(a, b, compare(a.rank, b.rank))
+				test(a.tuple, b.tuple, compare(a.rank, b.rank))
 			}
 		})
 	})
