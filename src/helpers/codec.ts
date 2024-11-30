@@ -24,7 +24,7 @@ export type CodecOptions = {
 	 */
 	escape?: string
 	/**
-	 * Disallowed characters. Throws an error if any are found while encoding.
+	 * Disallowed characters in strings. Throws an error if any are found while encoding.
 	 */
 	disallow?: string[]
 }
