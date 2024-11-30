@@ -1,143 +1,158 @@
 import { strict as assert } from "assert"
-import * as _ from "lodash"
 import { describe, it } from "mocha"
 import { Tuple } from "../storage/types"
-import { sortedValues } from "../test/fixtures"
-import { decodeTuple, decodeValue, encodeTuple, encodeValue } from "./codec"
+import { sortedValues as allSortedValues } from "../test/fixtures"
+import {
+	EncodingOptions,
+	decodeTuple,
+	decodeValue,
+	encodeTuple,
+	encodeValue,
+} from "./codec"
 import { compare } from "./compare"
-import { TupleToString, ValueToString } from "./compareTuple"
+import { randomInt } from "./randomInt"
 
-describe("codec", () => {
-	describe("encodeValue", () => {
-		it("Encodes and decodes properly", () => {
-			for (let i = 0; i < sortedValues.length; i++) {
-				const value = sortedValues[i]
-				const encoded = encodeValue(value)
-				const decoded = decodeValue(encoded)
+const ENCODING_OPTIONS: [string, EncodingOptions | undefined][] = [
+	["defaults", undefined],
+	["overrides", { delimiter: "\x01", escape: "\x02", disallow: ["\x00"] }],
+]
 
-				assert.deepStrictEqual(
-					decoded,
-					value,
-					[
-						ValueToString(value),
-						ValueToString(encoded),
-						ValueToString(decoded),
-					].join(" -> ")
-				)
-			}
+ENCODING_OPTIONS.forEach(([desc, options]) => {
+	describe(`codec with options: ${desc}`, () => {
+		// Removes disallow options
+		const sortedValues = allSortedValues.filter((x) =>
+			typeof x === "string"
+				? options?.disallow?.every((d) => !x.includes(d))
+				: true
+		)
+		describe("encodeValue", () => {
+			it("Encodes and decodes properly", () => {
+				for (let i = 0; i < sortedValues.length; i++) {
+					const value = sortedValues[i]
+					const encoded = encodeValue(value, options)
+					const decoded = decodeValue(encoded, options)
+
+					assert.deepStrictEqual(decoded, value)
+				}
+			})
+
+			it("Encodes in lexicographical order", () => {
+				for (let i = 0; i < sortedValues.length; i++) {
+					for (let j = 0; j < sortedValues.length; j++) {
+						const a = encodeValue(sortedValues[i], options)
+						const b = encodeValue(sortedValues[j], options)
+						assert.deepStrictEqual(compare(a, b), compare(i, j))
+					}
+				}
+			})
 		})
 
-		it("Encodes in lexicographical order", () => {
-			for (let i = 0; i < sortedValues.length; i++) {
-				for (let j = 0; j < sortedValues.length; j++) {
-					const a = encodeValue(sortedValues[i])
-					const b = encodeValue(sortedValues[j])
-					assert.deepStrictEqual(
-						compare(a, b),
-						compare(i, j),
-						`compareValue(${[
-							ValueToString(sortedValues[i]),
-							ValueToString(sortedValues[j]),
-						].join(", ")}) === compare(${[
-							JSON.stringify(a),
-							JSON.stringify(b),
-						].join(", ")})`
-					)
+		describe("encodeTuple", () => {
+			it("Encodes and decodes properly", () => {
+				const test = (tuple: Tuple) => {
+					const encoded = encodeTuple(tuple, options)
+					const decoded = decodeTuple(encoded, options)
+					assert.deepStrictEqual(decoded, tuple)
 				}
-			}
-		})
-	})
-
-	describe("encodeTuple", () => {
-		it("Encodes and decodes properly", () => {
-			const test = (tuple: Tuple) => {
-				const encoded = encodeTuple(tuple)
-				const decoded = decodeTuple(encoded)
-				assert.deepStrictEqual(
-					decoded,
-					tuple,
-					[
-						TupleToString(tuple),
-						ValueToString(encoded),
-						TupleToString(decoded),
-					].join(" -> ")
-				)
-			}
-			test([])
-			for (let i = 0; i < sortedValues.length; i++) {
-				const a = sortedValues[i]
-				test([a])
-				for (let j = 0; j < sortedValues.length; j++) {
-					const b = sortedValues[j]
-					test([a, b])
+				test([])
+				for (let i = 0; i < sortedValues.length; i++) {
+					const a = sortedValues[i]
+					test([a])
+					for (let j = 0; j < sortedValues.length; j++) {
+						const b = sortedValues[j]
+						test([a, b])
+					}
 				}
-			}
 
-			for (let i = 0; i < sortedValues.length - 2; i++) {
-				const opts = sortedValues.slice(i, i + 3)
-				for (const a of opts) {
-					for (const b of opts) {
-						for (const c of opts) {
-							test([a, b, c])
+				for (let i = 0; i < sortedValues.length - 2; i++) {
+					const opts = sortedValues.slice(i, i + 3)
+					for (const a of opts) {
+						for (const b of opts) {
+							for (const c of opts) {
+								test([a, b, c])
+							}
 						}
 					}
 				}
-			}
-		})
+			})
 
-		it("Encodes in lexicographical order", () => {
-			const test = (aTuple: Tuple, bTuple: Tuple, result: number) => {
-				const a = encodeTuple(aTuple)
-				const b = encodeTuple(bTuple)
-				assert.deepStrictEqual(
-					compare(a, b),
-					result,
-					`compareTuple(${[TupleToString(aTuple), TupleToString(bTuple)].join(
-						", "
-					)}) === compare(${[JSON.stringify(a), JSON.stringify(b)].join(", ")})`
-				)
-			}
-
-			for (let i = 0; i < sortedValues.length; i++) {
-				for (let j = 0; j < sortedValues.length; j++) {
-					const a = sortedValues[i]
-					const b = sortedValues[j]
-					test([a, a], [a, b], compare(i, j))
-					test([a, b], [b, a], compare(i, j))
-					test([b, a], [b, b], compare(i, j))
-					if (i !== j) {
-						test([a], [a, a], -1)
-						test([a], [a, b], -1)
-						test([a], [b, a], compare(i, j))
-						test([a], [b, b], compare(i, j))
-						test([b], [a, a], compare(j, i))
-						test([b], [a, b], compare(j, i))
-						test([b], [b, a], -1)
-						test([b], [b, b], -1)
+			it("Encodes in lexicographical order", () => {
+				const test2 = (
+					a: { tuple: Tuple; rank: number },
+					b: { tuple: Tuple; rank: number },
+					result: number
+				) => {
+					try {
+						test(a.tuple, b.tuple, result)
+					} catch (e) {
+						console.log({ aRank: a.rank, bRank: b.rank })
+						throw e
 					}
 				}
-			}
 
-			const sample = () => {
-				const x = sortedValues.length
-				const i = _.random(x - 1)
-				const j = _.random(x - 1)
-				const k = _.random(x - 1)
-				const tuple: Tuple = [sortedValues[i], sortedValues[j], sortedValues[k]]
-				const rank = i * x * x + j * x + k
-				return { tuple, rank }
-			}
+				const test = (aTuple: Tuple, bTuple: Tuple, result: number) => {
+					const a = encodeTuple(aTuple, options)
+					const b = encodeTuple(bTuple, options)
+					const actual = compare(a, b)
+					const expected = result
+					try {
+						assert.deepStrictEqual(actual, expected)
+					} catch (e) {
+						console.log({ aTuple, bTuple, a, b, actual, expected })
+						throw e
+					}
+				}
 
-			// (40*40*40)^2 = 4 billion variations for these sorted 3-length tuples.
-			for (let iter = 0; iter < 100_000; iter++) {
-				const a = sample()
-				const b = sample()
-				test(a.tuple, b.tuple, compare(a.rank, b.rank))
-			}
+				for (let i = 0; i < sortedValues.length; i++) {
+					for (let j = 0; j < sortedValues.length; j++) {
+						const a = sortedValues[i]
+						const b = sortedValues[j]
+						try {
+							test([a, a], [a, b], compare(i, j))
+						} catch (e) {
+							console.log({ i, j })
+							throw e
+						}
+						test([a, b], [b, a], compare(i, j))
+						test([b, a], [b, b], compare(i, j))
+						if (i !== j) {
+							test([a], [a, a], -1)
+							test([a], [a, b], -1)
+							test([a], [b, a], compare(i, j))
+							test([a], [b, b], compare(i, j))
+							test([b], [a, a], compare(j, i))
+							test([b], [a, b], compare(j, i))
+							test([b], [b, a], -1)
+							test([b], [b, b], -1)
+						}
+					}
+				}
+
+				const sample = () => {
+					const x = sortedValues.length
+					const i = randomInt(x - 1)
+					const j = randomInt(x - 1)
+					const k = randomInt(x - 1)
+					const tuple: Tuple = [
+						sortedValues[i],
+						sortedValues[j],
+						sortedValues[k],
+					]
+					const rank = i * x * x + j * x + k
+					return { tuple, rank }
+				}
+
+				// (40*40*40)^2 = 4 billion variations for these sorted 3-length tuples.
+				for (let iter = 0; iter < 100_000; iter++) {
+					const a = sample()
+					const b = sample()
+					test2(a, b, compare(a.rank, b.rank))
+				}
+			})
 		})
 	})
 })
 
-function not(x: number) {
-	return x === 0 ? x : -1 * x
-}
+it("Throws error if a value cannot be encoded", () => {
+	assert.throws(() => encodeValue("a\x00b", { disallow: ["\x00"] }))
+})
