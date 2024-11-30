@@ -10,14 +10,15 @@ import {
 	encodeValue,
 } from "./codec"
 import { compare } from "./compare"
+import { TupleToString, ValueToString } from "./compareTuple"
 import { randomInt } from "./randomInt"
 
-const ENCODING_OPTIONS: [string, EncodingOptions | undefined][] = [
+const ENCODING_OPTIONS_TO_TEST: [string, EncodingOptions | undefined][] = [
 	["defaults", undefined],
 	["overrides", { delimiter: "\x01", escape: "\x02", disallow: ["\x00"] }],
 ]
 
-ENCODING_OPTIONS.forEach(([desc, options]) => {
+ENCODING_OPTIONS_TO_TEST.forEach(([desc, options]) => {
 	describe(`codec with options: ${desc}`, () => {
 		// Removes disallow options
 		const sortedValues = allSortedValues.filter((x) =>
@@ -32,7 +33,15 @@ ENCODING_OPTIONS.forEach(([desc, options]) => {
 					const encoded = encodeValue(value, options)
 					const decoded = decodeValue(encoded, options)
 
-					assert.deepStrictEqual(decoded, value)
+					assert.deepStrictEqual(
+						decoded,
+						value,
+						[
+							ValueToString(value),
+							ValueToString(encoded),
+							ValueToString(decoded),
+						].join(" -> ")
+					)
 				}
 			})
 
@@ -41,7 +50,17 @@ ENCODING_OPTIONS.forEach(([desc, options]) => {
 					for (let j = 0; j < sortedValues.length; j++) {
 						const a = encodeValue(sortedValues[i], options)
 						const b = encodeValue(sortedValues[j], options)
-						assert.deepStrictEqual(compare(a, b), compare(i, j))
+						assert.deepStrictEqual(
+							compare(a, b),
+							compare(i, j),
+							`compareValue(${[
+								ValueToString(sortedValues[i]),
+								ValueToString(sortedValues[j]),
+							].join(", ")}) === compare(${[
+								JSON.stringify(a),
+								JSON.stringify(b),
+							].join(", ")})`
+						)
 					}
 				}
 			})
@@ -52,7 +71,15 @@ ENCODING_OPTIONS.forEach(([desc, options]) => {
 				const test = (tuple: Tuple) => {
 					const encoded = encodeTuple(tuple, options)
 					const decoded = decodeTuple(encoded, options)
-					assert.deepStrictEqual(decoded, tuple)
+					assert.deepStrictEqual(
+						decoded,
+						tuple,
+						[
+							TupleToString(tuple),
+							ValueToString(encoded),
+							TupleToString(decoded),
+						].join(" -> ")
+					)
 				}
 				test([])
 				for (let i = 0; i < sortedValues.length; i++) {
@@ -96,7 +123,16 @@ ENCODING_OPTIONS.forEach(([desc, options]) => {
 					const actual = compare(a, b)
 					const expected = result
 					try {
-						assert.deepStrictEqual(actual, expected)
+						assert.deepStrictEqual(
+							actual,
+							expected,
+							`compareTuple(${[
+								TupleToString(aTuple),
+								TupleToString(bTuple),
+							].join(
+								", "
+							)}) === compare(${[JSON.stringify(a), JSON.stringify(b)].join(", ")})`
+						)
 					} catch (e) {
 						console.log({ aTuple, bTuple, a, b, actual, expected })
 						throw e
