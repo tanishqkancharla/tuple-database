@@ -104,12 +104,7 @@ describe("codec", () => {
 				for (let j = 0; j < sortedValues.length; j++) {
 					const a = sortedValues[i]
 					const b = sortedValues[j]
-					try {
-						test([a, a], [a, b], compare(i, j))
-					} catch (e) {
-						console.log({ i, j })
-						throw e
-					}
+					test([a, a], [a, b], compare(i, j))
 					test([a, b], [b, a], compare(i, j))
 					test([b, a], [b, b], compare(i, j))
 					if (i !== j) {
