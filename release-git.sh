@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the package and commit the output to the `build` branch, whose root is
+# Build the package and commit the output to the `release` branch, whose root is
 # installable directly from GitHub:
 #   "tuple-database": "github:tanishqkancharla/tuple-database#<build-commit>"
 set -euo pipefail
@@ -27,14 +27,14 @@ rm -rf build/test build/tools
 
 worktree="$(mktemp -d)"
 trap 'git worktree remove --force "$worktree"' EXIT
-if git show-ref --verify --quiet refs/heads/build; then
-	git worktree add "$worktree" build
+if git show-ref --verify --quiet refs/heads/release; then
+	git worktree add "$worktree" release
 else
 	git worktree add --detach "$worktree"
-	git -C "$worktree" checkout --orphan build
+	git -C "$worktree" checkout --orphan release
 fi
 git -C "$worktree" rm -rf --quiet . 2>/dev/null || true
 cp -R build/. "$worktree"/
 git -C "$worktree" add -A
 git -C "$worktree" commit --quiet -m "Build $source_commit"
-echo "build branch: $(git rev-parse build)"
+echo "release branch: $(git rev-parse refs/heads/release)"
