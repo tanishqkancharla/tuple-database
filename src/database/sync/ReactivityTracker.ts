@@ -7,7 +7,7 @@ This file is generated from async/AsyncReactivityTracker.ts
 type Identity<T> = T
 
 import { maybePromiseAll } from "../../helpers/maybeWaitForPromises"
-import { randomId } from "../../helpers/randomId"
+import { defaultRng } from "../../helpers/randomId"
 import {
 	Bounds,
 	getPrefixContainingBounds,
@@ -16,14 +16,16 @@ import {
 import { InMemoryTupleStorage } from "../../storage/InMemoryTupleStorage"
 import { MIN, ScanStorageArgs, Tuple, WriteOps } from "../../storage/types"
 import { TupleStorageApi } from "../sync/types"
-import { TxId } from "../types"
+import { RngApi, TxId } from "../types"
 import { Callback } from "./types"
 
 export class ReactivityTracker {
 	private listenersDb = new InMemoryTupleStorage()
 
+	constructor(private rng: RngApi = defaultRng) {}
+
 	subscribe(args: ScanStorageArgs, callback: Callback) {
-		return subscribe(this.listenersDb, args, callback)
+		return subscribe(this.listenersDb, this.rng.randomId(), args, callback)
 	}
 
 	computeReactivityEmits(writes: WriteOps) {
@@ -127,6 +129,7 @@ function getReactivityEmits(listenersDb: TupleStorageApi, writes: WriteOps) {
 
 function subscribe(
 	listenersDb: TupleStorageApi,
+	id: string,
 	args: ScanStorageArgs,
 	callback: Callback
 ) {
@@ -134,7 +137,6 @@ function subscribe(
 
 	const prefix = getPrefixContainingBounds(args)
 
-	const id = randomId()
 	const value: Listener = { callback, bounds: args }
 
 	listenersDb.commit({ set: [{ key: [prefix, id], value }] })

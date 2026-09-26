@@ -1,6 +1,7 @@
 import { chunk } from "lodash"
 import * as uuid from "uuid"
 import md5 from "md5"
+import { RngApi } from "../database/types"
 
 export function randomId(seed?: string): string {
 	if (seed) {
@@ -11,3 +12,5 @@ export function randomId(seed?: string): string {
 		return uuid.v4()
 	}
 }
+
+export const defaultRng: RngApi = { randomId: () => randomId() }

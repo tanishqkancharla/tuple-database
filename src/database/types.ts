@@ -23,3 +23,12 @@ type AllowMinMax<T extends Tuple> = {
 export type TxId = string
 
 export type Unsubscribe = () => void
+
+export type RngApi = {
+	randomId: () => string
+}
+
+export type TupleDatabaseOptions = {
+	/** Source of listener and fallback transaction ids. Defaults to random UUIDs. */
+	rng?: RngApi
+}

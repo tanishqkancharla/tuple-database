@@ -1,9 +1,9 @@
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
-import { randomId } from "../../helpers/randomId"
+import { defaultRng } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { TupleStorageApi } from "../sync/types"
-import { TxId, Unsubscribe } from "../types"
+import { RngApi, TupleDatabaseOptions, TxId, Unsubscribe } from "../types"
 import { AsyncReactivityTracker } from "./AsyncReactivityTracker"
 import {
 	AsyncCallback,
@@ -12,10 +12,17 @@ import {
 } from "./asyncTypes"
 
 export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
-	constructor(private storage: TupleStorageApi | AsyncTupleStorageApi) {}
-
+	private rng: RngApi
 	log = new ConcurrencyLog()
-	reactivity = new AsyncReactivityTracker()
+	reactivity: AsyncReactivityTracker
+
+	constructor(
+		private storage: TupleStorageApi | AsyncTupleStorageApi,
+		options: TupleDatabaseOptions = {}
+	) {
+		this.rng = options.rng ?? defaultRng
+		this.reactivity = new AsyncReactivityTracker(this.rng)
+	}
 
 	async scan(args: ScanStorageArgs = {}, txId?: TxId): Promise<KeyValuePair[]> {
 		const { reverse, limit, ...bounds } = args
@@ -40,7 +47,7 @@ export class AsyncTupleDatabase implements AsyncTupleDatabaseApi {
 		}
 		await this.storage.commit(writes)
 
-		return this.reactivity.emit(emits, txId || randomId())
+		return this.reactivity.emit(emits, txId || this.rng.randomId())
 	}
 
 	async cancel(txId: string) {

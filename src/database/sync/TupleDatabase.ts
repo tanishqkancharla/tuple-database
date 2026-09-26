@@ -7,19 +7,26 @@ This file is generated from async/AsyncTupleDatabase.ts
 type Identity<T> = T
 
 import { iterateWrittenTuples } from "../../helpers/iterateTuples"
-import { randomId } from "../../helpers/randomId"
+import { defaultRng } from "../../helpers/randomId"
 import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types"
 import { ConcurrencyLog } from "../ConcurrencyLog"
 import { TupleStorageApi } from "../sync/types"
-import { TxId, Unsubscribe } from "../types"
+import { RngApi, TupleDatabaseOptions, TxId, Unsubscribe } from "../types"
 import { ReactivityTracker } from "./ReactivityTracker"
 import { Callback, TupleDatabaseApi } from "./types"
 
 export class TupleDatabase implements TupleDatabaseApi {
-	constructor(private storage: TupleStorageApi) {}
-
+	private rng: RngApi
 	log = new ConcurrencyLog()
-	reactivity = new ReactivityTracker()
+	reactivity: ReactivityTracker
+
+	constructor(
+		private storage: TupleStorageApi,
+		options: TupleDatabaseOptions = {}
+	) {
+		this.rng = options.rng ?? defaultRng
+		this.reactivity = new ReactivityTracker(this.rng)
+	}
 
 	scan(args: ScanStorageArgs = {}, txId?: TxId): Identity<KeyValuePair[]> {
 		const { reverse, limit, ...bounds } = args
@@ -41,7 +48,7 @@ export class TupleDatabase implements TupleDatabaseApi {
 		}
 		this.storage.commit(writes)
 
-		return this.reactivity.emit(emits, txId || randomId())
+		return this.reactivity.emit(emits, txId || this.rng.randomId())
 	}
 
 	cancel(txId: string) {
