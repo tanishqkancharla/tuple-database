@@ -1,0 +1,21 @@
+type Identity<T> = T;
+import { KeyValuePair, ScanStorageArgs, WriteOps } from "../../storage/types";
+import { ConcurrencyLog } from "../ConcurrencyLog";
+import { TupleStorageApi } from "../sync/types";
+import { TupleDatabaseOptions, TxId, Unsubscribe } from "../types";
+import { ReactivityTracker } from "./ReactivityTracker";
+import { Callback, TupleDatabaseApi } from "./types";
+export declare class TupleDatabase implements TupleDatabaseApi {
+    private storage;
+    private rng;
+    log: ConcurrencyLog;
+    reactivity: ReactivityTracker;
+    constructor(storage: TupleStorageApi, options?: TupleDatabaseOptions);
+    scan(args?: ScanStorageArgs, txId?: TxId): Identity<KeyValuePair[]>;
+    subscribe(args: ScanStorageArgs, callback: Callback): Identity<Unsubscribe>;
+    commit(writes: WriteOps, txId?: string): any;
+    cancel(txId: string): void;
+    close(): void;
+}
+export {};
+//# sourceMappingURL=../../../src/database/sync/TupleDatabase.d.ts.map

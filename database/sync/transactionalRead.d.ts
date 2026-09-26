@@ -1,0 +1,7 @@
+import { KeyValuePair } from "../../storage/types";
+import { ReadOnlyTupleDatabaseClientApi, TupleDatabaseClientApi, TupleTransactionApi } from "./types";
+/**
+ * Similar to transactionalReadWrite and transactionalWrite but only allows reads.
+ */
+export declare function transactionalRead<S extends KeyValuePair = KeyValuePair>(retries?: number): <I extends any[], O>(fn: (tx: ReadOnlyTupleDatabaseClientApi<S>, ...args: I) => O) => (dbOrTx: TupleDatabaseClientApi<S> | TupleTransactionApi<S> | ReadOnlyTupleDatabaseClientApi<S>, ...args: I) => O;
+//# sourceMappingURL=../../../src/database/sync/transactionalRead.d.ts.map

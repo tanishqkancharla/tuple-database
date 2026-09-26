@@ -1,0 +1,14 @@
+import { ScanStorageArgs, WriteOps } from "../../storage/types";
+import { RngApi, TxId } from "../types";
+import { AsyncCallback } from "./asyncTypes";
+export declare class AsyncReactivityTracker {
+    private rng;
+    private listenersDb;
+    constructor(rng?: RngApi);
+    subscribe(args: ScanStorageArgs, callback: AsyncCallback): () => void;
+    computeReactivityEmits(writes: WriteOps): ReactivityEmits;
+    emit(emits: ReactivityEmits, txId: TxId): Promise<any>;
+}
+type ReactivityEmits = Map<AsyncCallback, Required<WriteOps>>;
+export {};
+//# sourceMappingURL=../../../src/database/async/AsyncReactivityTracker.d.ts.map
