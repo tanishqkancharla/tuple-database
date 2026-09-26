@@ -36,5 +36,9 @@ fi
 git -C "$worktree" rm -rf --quiet . 2>/dev/null || true
 cp -R build/. "$worktree"/
 git -C "$worktree" add -A
+if git -C "$worktree" diff --cached --quiet; then
+	echo "release branch unchanged: $(git rev-parse refs/heads/release)"
+	exit 0
+fi
 git -C "$worktree" commit --quiet -m "Build $source_commit"
 echo "release branch: $(git rev-parse refs/heads/release)"
