@@ -1613,25 +1613,32 @@ export function databaseTestSuite(
 
 				store.transact().set(["person", 1], "chester").commit()
 
-				assert.deepEqual(peopleList, ["chester", "meghan"])
-				assert.deepEqual(compute, 1)
-				compute = 0
-
-				store.transact().set(["person", 3], "joe").commit()
-				assert.deepEqual(peopleList, ["chester", "meghan"])
-				assert.deepEqual(compute, 0)
-
-				// Two changes at once, only one callback.
-				store
-					.transact()
-					.set(["person", 2], "mego")
-					.set(["person", 1], "chet")
-					.remove(["list", 0, 1])
-					.set(["list", 2, 1], null)
-					.commit()
-
-				assert.deepEqual(peopleList, ["mego", "chet"])
-				assert.deepEqual(compute, 1)
+				// Explicit continuations preserve the microtask boundary in the
+				// generated sync suite, whose macro removes /.
+				return Promise.resolve()
+					.then(() => {
+						assert.deepEqual(peopleList, ["chester", "meghan"])
+						assert.deepEqual(compute, 1)
+						compute = 0
+						return store.transact().set(["person", 3], "joe").commit()
+					})
+					.then(() => {
+						assert.deepEqual(peopleList, ["chester", "meghan"])
+						assert.deepEqual(compute, 0)
+						// Two changes at once, only one callback.
+						return store
+							.transact()
+							.set(["person", 2], "mego")
+							.set(["person", 1], "chet")
+							.remove(["list", 0, 1])
+							.set(["list", 2, 1], null)
+							.commit()
+					})
+					.then(() => {
+						assert.deepEqual(peopleList, ["mego", "chet"])
+						assert.deepEqual(compute, 1)
+						destroy()
+					})
 			})
 
 			it("can transactionally read", () => {
@@ -1669,10 +1676,15 @@ export function databaseTestSuite(
 						{ key: ["meghan"], value: 2 },
 					],
 				})
-				assert.equal(total, 4)
-
-				store.transact().set(["chet"], 3).commit()
-				assert.equal(total, 5)
+				return Promise.resolve()
+					.then(() => {
+						assert.equal(total, 4)
+						return store.transact().set(["chet"], 3).commit()
+					})
+					.then(() => {
+						assert.equal(total, 5)
+						destroy()
+					})
 			})
 		})
 

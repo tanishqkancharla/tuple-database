@@ -43,7 +43,14 @@ export function subscribeQuery<S extends KeyValuePair, T>(
 		lastComputedTxId = txId
 		resetListeners()
 		const result = compute()
-		callback(result)
+		// Capture each result and refresh its read dependencies before deferring
+		// application code. A callback must not reenter the committing transaction.
+		void Promise.resolve()
+			.then(() => {
+				if (destroyed) return
+				return callback(result)
+			})
+			.catch(console.error)
 	}
 
 	const recomputeQueue = new Queue()
