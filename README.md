@@ -722,6 +722,15 @@ Note that this will ignore any `limit` in your subscription. To efficiently list
 
 ### `subscribeQuery`
 
+`subscribeQuery` returns its initial result synchronously. Later query results
+are computed when writes invalidate their read ranges, then delivered to the
+callback in microtasks. Each computed result is captured and delivered in order;
+notifications are not coalesced. `destroy()` also cancels queued notifications.
+Callback failures are logged without failing the commit or blocking later
+notifications. `subscribeQueryAsync` uses the same callback scheduling rule,
+with an asynchronous initial result. Low-level `client.subscribe` write
+notifications retain their existing scheduling.
+
 Sometimes you need to listen to multiple ranges to derive some information. It can be cumbersome to use `client.subscribe` in these circumstances and for this we can use `subscribeQuery` which keeps track of all ranges and subscriptions for you.
 
 ```ts

@@ -26,7 +26,15 @@ async function subscribeQueryAsync(db, fn, callback) {
         lastComputedTxId = txId;
         resetListeners();
         const result = await compute();
-        callback(result);
+        // Capture each result and refresh its read dependencies before deferring
+        // application code. A callback must not reenter the committing transaction.
+        void Promise.resolve()
+            .then(() => {
+            if (destroyed)
+                return;
+            return callback(result);
+        })
+            .catch(console.error);
     };
     const recomputeQueue = new Queue_1.Queue();
     // Subscribe for every scan that gets called.

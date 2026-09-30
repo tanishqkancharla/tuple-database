@@ -1328,22 +1328,32 @@ function asyncDatabaseTestSuite(name, createStorage, durable = true) {
                 assert_1.strict.deepEqual(compute, 1);
                 compute = 0;
                 await store.transact().set(["person", 1], "chester").commit();
-                assert_1.strict.deepEqual(peopleList, ["chester", "meghan"]);
-                assert_1.strict.deepEqual(compute, 1);
-                compute = 0;
-                await store.transact().set(["person", 3], "joe").commit();
-                assert_1.strict.deepEqual(peopleList, ["chester", "meghan"]);
-                assert_1.strict.deepEqual(compute, 0);
-                // Two changes at once, only one callback.
-                await store
-                    .transact()
-                    .set(["person", 2], "mego")
-                    .set(["person", 1], "chet")
-                    .remove(["list", 0, 1])
-                    .set(["list", 2, 1], null)
-                    .commit();
-                assert_1.strict.deepEqual(peopleList, ["mego", "chet"]);
-                assert_1.strict.deepEqual(compute, 1);
+                // Explicit continuations preserve the microtask boundary in the
+                // generated sync suite, whose macro removes async/await.
+                return Promise.resolve()
+                    .then(() => {
+                    assert_1.strict.deepEqual(peopleList, ["chester", "meghan"]);
+                    assert_1.strict.deepEqual(compute, 1);
+                    compute = 0;
+                    return store.transact().set(["person", 3], "joe").commit();
+                })
+                    .then(() => {
+                    assert_1.strict.deepEqual(peopleList, ["chester", "meghan"]);
+                    assert_1.strict.deepEqual(compute, 0);
+                    // Two changes at once, only one callback.
+                    return store
+                        .transact()
+                        .set(["person", 2], "mego")
+                        .set(["person", 1], "chet")
+                        .remove(["list", 0, 1])
+                        .set(["list", 2, 1], null)
+                        .commit();
+                })
+                    .then(() => {
+                    assert_1.strict.deepEqual(peopleList, ["mego", "chet"]);
+                    assert_1.strict.deepEqual(compute, 1);
+                    destroy();
+                });
             });
             (0, mocha_1.it)("can transactionally read", async () => {
                 const id = (0, randomId_1.randomId)();
@@ -1371,9 +1381,15 @@ function asyncDatabaseTestSuite(name, createStorage, durable = true) {
                         { key: ["meghan"], value: 2 },
                     ],
                 });
-                assert_1.strict.equal(total, 4);
-                await store.transact().set(["chet"], 3).commit();
-                assert_1.strict.equal(total, 5);
+                return Promise.resolve()
+                    .then(() => {
+                    assert_1.strict.equal(total, 4);
+                    return store.transact().set(["chet"], 3).commit();
+                })
+                    .then(() => {
+                    assert_1.strict.equal(total, 5);
+                    destroy();
+                });
             });
         });
         (0, mocha_1.describe)("subspace", () => {
